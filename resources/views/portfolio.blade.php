@@ -63,7 +63,7 @@
             border-radius: 50%;
             border: 3px solid var(--ink);
             margin-bottom: 1.5rem;
-}
+        }
         .peran { font-size: 1.25rem; color: var(--muted); max-width: 30ch; margin: 0 0 2rem; }
         .btns { display: flex; gap: .75rem; flex-wrap: wrap; }
         .btn {
@@ -79,21 +79,39 @@
         .btn.alt { color: var(--ink); }
         .btn.alt:hover { border-color: var(--blue); color: var(--blue); }
 
-        .code {
-            background: var(--code);
-            color: var(--code-text);
+        .term {
+            background: #050A07;
+            color: #4DFF88;
+            border: 1px solid #14301F;
             border-radius: 10px;
-            padding: 1.5rem 1.5rem 1.75rem;
             font-family: var(--mono);
             font-size: .9rem;
             line-height: 1.75;
-            overflow-x: auto;
             box-shadow: 8px 8px 0 var(--blue);
+            overflow: hidden;
         }
-        .code pre { margin: 0; font: inherit; white-space: pre; }
-        .k { color: var(--code-key); }
-        .s { color: var(--code-str); }
-        .d { color: var(--code-dim); }
+        .term-bar {
+            padding: .6rem 1.1rem;
+            background: #0B1A11;
+            border-bottom: 1px solid #14301F;
+            color: #5FBF84;
+            font-size: .8rem;
+        }
+        .term-body { padding: 1.25rem 1.25rem 1.5rem; min-height: 19rem; overflow-x: auto; }
+        .term-line { white-space: pre-wrap; word-break: break-word; }
+        .term-line .p { color: #7CFFB0; }
+        .term-line.out { color: #A9E8C0; }
+        .cursor {
+            display: inline-block;
+            width: .6em;
+            height: 1.05em;
+            margin-left: 2px;
+            vertical-align: text-bottom;
+            background: #4DFF88;
+            animation: kedip 1s steps(1) infinite;
+        }
+        @keyframes kedip { 50% { opacity: 0; } }
+        @media (prefers-reduced-motion: reduce) { .cursor { animation: none; } }
 
         section { padding: 3.5rem 0; border-top: 1px solid var(--line); }
         h2 {
@@ -123,7 +141,7 @@
             .hero .wrap, .cols { grid-template-columns: 1fr; }
             .hero { padding-top: 1.5rem; }
             .list li { grid-template-columns: 1fr; gap: .25rem; }
-            .code { box-shadow: 5px 5px 0 var(--blue); }
+            .term { box-shadow: 5px 5px 0 var(--blue); }
         }
     </style>
 </head>
@@ -145,7 +163,8 @@
             <div class="wrap">
                 <div>
                     @if (!empty($foto))
-                    <img class="foto" src="{{ asset($foto) }}" alt="Foto {{ $nama }}" width="140" height="140"> @endif
+                        <img class="foto" src="{{ asset($foto) }}" alt="Foto {{ $nama }}" width="140" height="140">
+                    @endif
                     <h1>{{ $nama }}</h1>
                     <p class="peran">{{ $peran }}</p>
                     <div class="btns">
@@ -154,19 +173,9 @@
                     </div>
                 </div>
 
-                <div class="code" role="img" aria-label="Ringkasan profil ditulis sebagai kode PHP">
-<pre><span class="d">&lt;?php</span>
-
-<span class="k">$bowo</span> = [
-    <span class="s">'nama'</span>   =&gt; <span class="s">'Bowo Ardhi Saputro'</span>,
-    <span class="s">'status'</span> =&gt; <span class="s">'Mahasiswa Ilmu Komputer'</span>,
-    <span class="s">'tujuan'</span> =&gt; <span class="s">'Web developer'</span>,
-    <span class="s">'stack'</span>  =&gt; [
-        <span class="s">'PHP'</span>,
-        <span class="s">'Laravel'</span>,
-        <span class="s">'HTML/CSS'</span>,
-    ],
-];</pre>
+                <div class="term" role="img" aria-label="Terminal yang menampilkan ringkasan profil">
+                    <div class="term-bar" aria-hidden="true">bowo&#64;portofolio:~</div>
+                    <div class="term-body" id="term" aria-hidden="true"></div>
                 </div>
             </div>
         </div>
@@ -227,5 +236,77 @@
     <footer>
         <div class="wrap">&copy; {{ date('Y') }} {{ $nama }}. Dibuat dengan Laravel.</div>
     </footer>
+    <script>
+        (function () {
+            var el = document.getElementById('term');
+            if (!el) return;
+
+            var langkah = [
+                { cmd: 'whoami', out: [@json($nama)] },
+                { cmd: 'cat status.txt', out: ['Mahasiswa Ilmu Komputer'] },
+                { cmd: 'echo $TUJUAN', out: ['Web developer'] },
+                { cmd: 'ls stack/', out: [@json(collect($skills)->pluck('nama')->implode('   '))] },
+                { cmd: 'php artisan serve', out: ['Server berjalan. Selamat datang!'] }
+            ];
+
+            var kursor = document.createElement('span');
+            kursor.className = 'cursor';
+            var diam = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+            function baris(kelas, prompt) {
+                var d = document.createElement('div');
+                d.className = 'term-line' + (kelas ? ' ' + kelas : '');
+                if (prompt) {
+                    var p = document.createElement('span');
+                    p.className = 'p';
+                    p.textContent = '$ ';
+                    d.appendChild(p);
+                }
+                el.appendChild(d);
+                return d;
+            }
+
+            function tampilSemua() {
+                langkah.forEach(function (l) {
+                    var c = baris('', true);
+                    c.appendChild(document.createTextNode(l.cmd));
+                    l.out.forEach(function (o) { baris('out').textContent = o; });
+                });
+                var akhir = baris('', true);
+                akhir.appendChild(kursor);
+            }
+
+            function ketik(teks, tujuan, selesai) {
+                var i = 0;
+                (function maju() {
+                    if (i < teks.length) {
+                        tujuan.insertBefore(document.createTextNode(teks.charAt(i++)), kursor);
+                        setTimeout(maju, 5 + Math.random() * 60);
+                    } else {
+                        selesai();
+                    }
+                })();
+            }
+
+            function jalan(n) {
+                if (n >= langkah.length) {
+                    baris('', true).appendChild(kursor);
+                    setTimeout(function () { el.innerHTML = ''; jalan(0); }, 4000);
+                    return;
+                }
+                var l = langkah[n];
+                var c = baris('', true);
+                c.appendChild(kursor);
+                ketik(l.cmd, c, function () {
+                    setTimeout(function () {
+                        l.out.forEach(function (o) { baris('out').textContent = o; });
+                        setTimeout(function () { jalan(n + 1); }, 450);
+                    }, 350);
+                });
+            }
+
+            if (diam) { tampilSemua(); } else { jalan(0); }
+        })();
+    </script>
 </body>
 </html>
