@@ -55,6 +55,15 @@
             letter-spacing: -0.02em;
             margin: 0 0 1.25rem;
         }
+        .foto {
+            display: block;
+            width: 140px;
+            height: 140px;
+            object-fit: cover;
+            border-radius: 50%;
+            border: 3px solid var(--ink);
+            margin-bottom: 1.5rem;
+}
         .peran { font-size: 1.25rem; color: var(--muted); max-width: 30ch; margin: 0 0 2rem; }
         .btns { display: flex; gap: .75rem; flex-wrap: wrap; }
         .btn {
@@ -135,6 +144,8 @@
         <div class="hero">
             <div class="wrap">
                 <div>
+                    @if (!empty($foto))
+                    <img class="foto" src="{{ asset($foto) }}" alt="Foto {{ $nama }}" width="140" height="140"> @endif
                     <h1>{{ $nama }}</h1>
                     <p class="peran">{{ $peran }}</p>
                     <div class="btns">

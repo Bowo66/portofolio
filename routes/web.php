@@ -7,6 +7,7 @@ Route::get('/', function () {
     return view('portfolio', [
         'nama' => 'Bowo Ardhi Saputro',
         'peran' => 'Mahasiswa Ilmu Komputer, calon web developer',
+        'foto' => 'foto-profil.png',
 
         // Silakan ganti dengan cerita kamu sendiri.
         'ringkasan' => 'Saya mahasiswa Ilmu Komputer yang sedang belajar menjadi web developer. '
